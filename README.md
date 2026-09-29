@@ -6,10 +6,20 @@ Polished Flutter Android app that organizes latest technology happenings with fo
 2. **Robotics** around the world
 3. **Space technology** news
 4. **Rocket launches** — scheduled windows, payload info, live-stream links
+5. **Videos** — newest real YouTube videos (Elon / Robotics / Space filter chips)
 
-Material 3 dark theme, modern tech aesthetic, bottom navigation across the four sections.
+Material 3 dark theme, modern tech aesthetic, bottom navigation across the five sections.
 
-> Feed and launch data is **sample/demo** so the UI is fully demoable offline. Comments in `lib/data/` mark where to wire live APIs later.
+All content is live: news from public RSS/Atom feeds (`lib/services/feed_sources.dart`),
+launches from Launch Library 2, and videos from public YouTube channel RSS feeds
+(`https://www.youtube.com/feeds/videos.xml?channel_id=…`, no API key; channel list in
+`lib/services/video_sources.dart`). Last good results are cached for offline use.
+
+Check every source from the command line:
+
+```bash
+dart run tool/verify_feeds.dart --launches --videos   # or --videos-only
+```
 
 ## Download APK (Android)
 
@@ -39,10 +49,10 @@ Browse all versions: https://github.com/sicpoe-wq/orbital-pulse/releases
 lib/
   main.dart
   theme/app_theme.dart
-  models/          news_item.dart, launch_item.dart
-  data/            sample_news.dart, sample_launches.dart
-  widgets/         news_card.dart, launch_card.dart, section_header.dart
-  screens/         home_shell.dart, news_feed_screen.dart, launches_screen.dart
+  models/          news_item.dart, launch_item.dart, video_item.dart
+  services/        feed_*, news_service, launch_service, video_* , cache_store
+  widgets/         news_card.dart, launch_card.dart, video_card.dart, ...
+  screens/         home_shell.dart, news_feed_screen.dart, launches_screen.dart, videos_screen.dart
 ```
 
 ## Setup

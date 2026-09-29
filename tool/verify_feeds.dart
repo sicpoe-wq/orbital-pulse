@@ -1,4 +1,4 @@
-// Run: dart run tool/verify_feeds.dart [--launches]
+// Run: dart run tool/verify_feeds.dart [--launches] [--videos | --videos-only]
 // Fetches every configured feed, prints item counts + sample title/link,
 // and flags any link that looks like a bare homepage.
 import 'dart:io';
@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:orbital_pulse/models/news_item.dart';
 import 'package:orbital_pulse/services/launch_service.dart';
 import 'package:orbital_pulse/services/news_service.dart';
+import 'package:orbital_pulse/services/video_service.dart';
 
 bool looksLikeHomepage(String url) {
   final u = Uri.parse(url);
@@ -13,9 +14,10 @@ bool looksLikeHomepage(String url) {
 }
 
 Future<void> main(List<String> args) async {
-  final svc = NewsService();
   var problems = 0;
-  for (final cat in NewsCategory.values) {
+  final videosOnly = args.contains('--videos-only');
+  final svc = NewsService();
+  for (final cat in videosOnly ? const <NewsCategory>[] : NewsCategory.values) {
     final r = await svc.fetchCategory(cat);
     stdout.writeln('\n=== ${cat.name.toUpperCase()} — ${r.items.length} merged items ===');
     for (final f in r.perFeed) {
@@ -55,6 +57,52 @@ Future<void> main(List<String> args) async {
       ls.close();
     }
   }
+  if (videosOnly || args.contains('--videos')) {
+    problems += await verifyVideos();
+  }
   stdout.writeln('\nproblems: $problems');
   exit(problems == 0 ? 0 : 1);
+}
+
+final _watchRe =
+    RegExp(r'^https://www\.youtube\.com/(watch\?v=|shorts/)[A-Za-z0-9_-]{11}$');
+
+/// Every channel must return entries (before keyword filtering), and every
+/// merged video must have a real watch URL + i.ytimg thumbnail.
+Future<int> verifyVideos() async {
+  final vs = VideoService();
+  var problems = 0;
+  for (final cat in NewsCategory.values) {
+    final r = await vs.fetchCategory(cat);
+    stdout.writeln('\n=== VIDEOS ${cat.name.toUpperCase()} — ${r.items.length} merged ===');
+    for (final c in r.perChannel) {
+      stdout.writeln('  [${c.items.length.toString().padLeft(2)}] ${c.channel.name} (${c.channel.channelId})'
+          '${c.channel.keywords != null ? ' [filtered]' : ''}'
+          '${c.error != null ? '  ERROR: ${c.error}' : ''}');
+      if (c.error != null) problems++;
+      // Filtered channels may legitimately have 0 matches; unfiltered must not.
+      if (c.error == null && c.items.isEmpty && c.channel.keywords == null) {
+        stdout.writeln('       NO ENTRIES');
+        problems++;
+      }
+    }
+    for (final v in r.items.take(4)) {
+      stdout.writeln('   • "${v.title}" — ${v.channel}, ${v.publishedAt.toIso8601String()}'
+          '${v.views != null ? ', ${v.views} views' : ''}');
+      stdout.writeln('     ${v.url}');
+    }
+    final badUrl = r.items.where((v) => !_watchRe.hasMatch(v.url)).length;
+    final badThumb =
+        r.items.where((v) => !Uri.parse(v.thumbnailUrl).host.endsWith('ytimg.com')).length;
+    final ids = r.items.map((v) => v.videoId).toSet().length;
+    var sorted = true;
+    for (var i = 1; i < r.items.length; i++) {
+      if (r.items[i].publishedAt.isAfter(r.items[i - 1].publishedAt)) sorted = false;
+    }
+    stdout.writeln('  bad urls: $badUrl, bad thumbs: $badThumb, dupes: ${r.items.length - ids}, sorted: $sorted');
+    if (r.items.isEmpty) problems++;
+    problems += badUrl + badThumb + (r.items.length - ids) + (sorted ? 0 : 1);
+  }
+  vs.close();
+  return problems;
 }

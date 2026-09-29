@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/news_item.dart';
 import 'launches_screen.dart';
 import 'news_feed_screen.dart';
+import 'videos_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -19,6 +20,7 @@ class _HomeShellState extends State<HomeShell> {
     'Robotics',
     'Space Tech',
     'Launches',
+    'Videos',
   ];
 
   late final List<Widget> _pages = [
@@ -38,6 +40,7 @@ class _HomeShellState extends State<HomeShell> {
       subtitle: 'Agencies, observatories, and orbital industry',
     ),
     const LaunchesScreen(),
+    const VideosScreen(),
   ];
 
   @override
@@ -96,6 +99,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.rocket_outlined),
             selectedIcon: Icon(Icons.rocket),
             label: 'Launches',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.smart_display_outlined),
+            selectedIcon: Icon(Icons.smart_display),
+            label: 'Videos',
           ),
         ],
       ),

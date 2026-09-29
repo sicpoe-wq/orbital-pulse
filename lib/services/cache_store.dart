@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/launch_item.dart';
 import '../models/news_item.dart';
+import '../models/video_item.dart';
 
 class Cached<T> {
   Cached(this.data, this.fetchedAt);
@@ -15,6 +16,7 @@ class Cached<T> {
 /// Stores the last good results locally for offline use.
 class CacheStore {
   static String _newsKey(NewsCategory c) => 'news_cache_v2_${c.name}';
+  static String _videoKey(NewsCategory c) => 'video_cache_v1_${c.name}';
   static const _launchKey = 'launch_cache_v2';
   static const _launchBlockedUntilKey = 'launch_blocked_until_v2';
 
@@ -79,5 +81,31 @@ class CacheStore {
   static Future<void> setLaunchBlockedUntil(DateTime t) async {
     final p = await SharedPreferences.getInstance();
     await p.setString(_launchBlockedUntilKey, t.toIso8601String());
+  }
+
+  static Future<Cached<List<VideoItem>>?> loadVideos(NewsCategory c) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final raw = p.getString(_videoKey(c));
+      if (raw == null) return null;
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      final items = (j['items'] as List)
+          .map((e) => VideoItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return Cached(items, DateTime.parse(j['fetchedAt'] as String));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> saveVideos(NewsCategory c, List<VideoItem> items) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(
+      _videoKey(c),
+      jsonEncode({
+        'fetchedAt': DateTime.now().toIso8601String(),
+        'items': items.map((e) => e.toJson()).toList(),
+      }),
+    );
   }
 }

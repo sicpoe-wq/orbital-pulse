@@ -7,7 +7,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const OrbitalPulseApp());
     expect(find.text('OrbitalPulse'), findsOneWidget);
-    expect(find.text('Elon'), findsOneWidget);
+    // "Elon" appears in the bottom nav and as a Videos filter chip.
+    expect(find.text('Elon'), findsWidgets);
     expect(find.text('Launches'), findsOneWidget);
+    expect(find.text('Videos'), findsOneWidget);
   });
 }
